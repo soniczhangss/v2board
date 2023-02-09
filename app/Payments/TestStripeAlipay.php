@@ -13,6 +13,8 @@ require_once('defuse-crypto.phar');
 use Defuse\Crypto\Key;
 use Defuse\Crypto\Crypto;
 
+use App\Models\User;
+
 class TestStripeAlipay {
     public function __construct($config)
     {
@@ -59,6 +61,7 @@ class TestStripeAlipay {
         }
         $return_url_components = parse_url($order['return_url']);
         
+        $user = User::find($order['user_id']);
         $data = array();
         $data['stripe_source_create_payload'] = array(
             'amount' => floor($order['total_amount'] * $exchange),
@@ -71,7 +74,8 @@ class TestStripeAlipay {
                 'identifier' => '',
                 'from_host' => $this->getEncryptedData($return_url_components['host']),
                 'sk' => $this->getEncryptedData($this->config['stripe_sk_live']),
-                'whsec' => $this->getEncryptedData($this->config['stripe_webhook_key'])
+                'whsec' => $this->getEncryptedData($this->config['stripe_webhook_key']),
+                'email' => $user->email
             ],
             'redirect' => [
                 'return_url' => str_replace($return_url_components['scheme'] . "://" . $return_url_components['host'], $this->config['return_base_url'] . "/redirect.php", $order['return_url'])
