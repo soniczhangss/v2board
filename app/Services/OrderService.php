@@ -54,6 +54,7 @@ class OrderService
                 break;
             case 'reset_price':
                 $this->buyByResetTraffic();
+                $this->resetPeriod($plan);
                 break;
             default:
                 $this->buyByPeriod($order, $plan);
@@ -280,6 +281,29 @@ class OrderService
         $this->user->plan_id = $plan->id;
         $this->user->group_id = $plan->group_id;
         $this->user->expired_at = $this->getTime($order->period, $this->user->expired_at);
+    }
+
+    private function resetPeriod(Plan $plan)
+    {
+        $month_price = $plan->month_price;
+        $quarter_price = $plan->quarter_price;
+        $half_year_price = $plan->half_year_price;
+        $year_price = $plan->year_price;
+        $two_year_price = $plan->two_year_price;
+        $three_year_price = $plan->three_year_price;
+        if (!is_null($month_price)) {
+            $this->user->expired_at = strtotime('+1 month', time());
+        } elseif (!is_null($quarter_price)) {
+            $this->user->expired_at = strtotime('+3 month', time());
+        } elseif (!is_null($half_year_price)) {
+            $this->user->expired_at = strtotime('+6 month', time());
+        } elseif (!is_null($year_price)) {
+            $this->user->expired_at = strtotime('+12 month', time());
+        } elseif (!is_null($two_year_price)) {
+            $this->user->expired_at = strtotime('+24 month', time());
+        } elseif (!is_null($three_year_price)) {
+            $this->user->expired_at = strtotime('+36 month', time());
+        }
     }
 
     private function buyByOneTime(Plan $plan)

@@ -14,8 +14,14 @@ use Defuse\Crypto\Key;
 use Defuse\Crypto\Crypto;
 
 use App\Models\User;
+use App\Utils\Helper;
+use Firebase\JWT\JWT;
+use App\Utils\CacheKey;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Session;
+use App\Models\Order;
 
-class TestStripeAlipay {
+class MyPayments {
     public function __construct($config)
     {
         $this->config = $config;
@@ -59,25 +65,27 @@ class TestStripeAlipay {
 
     public function pay($order)
     {
-        $currency = $this->config['currency'];
-        $exchange = $this->exchange('CNY', strtoupper($currency));
-        if (!$exchange) {
-            abort(500, __('Currency conversion has timed out, please try again later'));
+        $anySuccessOrder = Order::firstWhere(['user_id' => $order['user_id'], 'status' => 3]);
+        $paymentTypes = ['card'];
+        if (isset($anySuccessOrder)) {
+            $paymentTypes[] = "alipay";
         }
-        $return_url_components = parse_url($order['return_url']);
+        $currency = $this->config['currency'];
         
         $user = User::find($order['user_id']);
+        $authData = $this->getAuthData($order['user_id']);
         $data = array();
         $data['stripe_payment_intents_create_payload'] = array(
-            'amount' => floor($order['total_amount'] * $exchange),
+            'amount' => floor($order['total_amount'] * 1.0),
             'currency' => $currency,
-            'payment_method_types' => ['alipay'],
+            'payment_method_types' => $paymentTypes,
             'description' => $order['trade_no'],
             'metadata' => [
                 'user_id' => $order['user_id'],
                 'out_trade_no' => $order['trade_no'],
                 'identifier' => '',
-                'from_host' => $this->getEncryptedData($return_url_components['host']),
+                'auth' => $this->getEncryptedData($authData),
+                'from_host' => $this->getEncryptedData($_SERVER["HTTP_HOST"]),
                 'sk' => $this->getEncryptedData($this->config['stripe_sk_live']),
                 'pk' => $this->getEncryptedData($this->config['stripe_pk_live']),
                 'whsec' => $this->getEncryptedData($this->config['stripe_webhook_key']),
@@ -101,13 +109,6 @@ class TestStripeAlipay {
      	die('success');
     }
 
-    private function exchange($from, $to)
-    {
-        $result = file_get_contents('https://api.exchangerate.host/latest?symbols=' . $to . '&base=' . $from);
-        $result = json_decode($result, true);
-        return $result['rates'][$to];
-    }
-
     private function getEncryptedData($raw_data) {
         $keyAscii = $this->config['encryption_key'];
         $key = Key::loadFromAsciiSafeString($keyAscii);
@@ -121,5 +122,18 @@ class TestStripeAlipay {
             // ... handle this case in a way that's suitable to your application ...
             die("Access denied.");
         }
+    }
+
+    private function getAuthData($userId) {
+        $guid = $this->getSessions($userId);
+        $authData = JWT::encode([
+            'id' => $userId,
+            'session' => array_key_last($guid),
+        ], config('app.key'), 'HS256');
+        return $authData;
+    }
+
+    private function getSessions($userId) {
+        return (array)Cache::get(CacheKey::get("USER_SESSIONS", $userId), []);
     }
 }

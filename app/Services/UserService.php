@@ -33,6 +33,11 @@ class UserService
         return $lastDay - $today + $day;
     }
 
+    function calcResetDayByExpireDayAfterTrafficReset(int $expiredAt)
+    {
+        return round(abs($expiredAt - time()) / 86400);
+    }
+
     private function calcResetDayByYearFirstDay(): int
     {
         $nextYear = strtotime(date("Y-01-01", strtotime('+1 year')));
@@ -64,7 +69,8 @@ class UserService
                         return $this->calcResetDayByMonthFirstDay();
                     // expire day
                     case 1:
-                        return $this->calcResetDayByExpireDay($user->expired_at);
+                        // return $this->calcResetDayByExpireDay($user->expired_at);
+                        return $this->calcResetDayByExpireDayAfterTrafficReset($user->expired_at);
                     // no action
                     case 2:
                         return null;
