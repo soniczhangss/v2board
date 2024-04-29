@@ -94,7 +94,7 @@ class OrderController extends Controller
         }
 
         if ($request->input('period') === 'reset_price') {
-            if (!$userService->isAvailable($user) || $plan->id !== $user->plan_id) {
+            if (!$userService->isAvailableNoExpiryCheck($user) || $plan->id !== $user->plan_id) {
                 abort(500, __('Subscription has expired or no active subscription, unable to purchase Data Reset Package'));
             }
         }
@@ -109,10 +109,12 @@ class OrderController extends Controller
             abort(500, __('This subscription cannot be renewed, please change to another subscription'));
         }
 
-
-        if (!$plan->show && $plan->renew && !$userService->isAvailable($user)) {
+        if (!$plan->show && $plan->renew && !$userService->isAvailableNoExpiryCheck($user)) {
             abort(500, __('This subscription has expired, please change to another subscription'));
         }
+        // if (!$plan->show && $plan->renew && !$userService->isAvailable($user)) {
+        //     abort(500, __('This subscription has expired, please change to another subscription'));
+        // }
 
         DB::beginTransaction();
         $order = new Order();

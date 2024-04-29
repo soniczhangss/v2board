@@ -54,7 +54,9 @@ class OrderService
                 break;
             case 'reset_price':
                 $this->buyByResetTraffic();
-                $this->resetPeriod($plan);
+                if ($this->user->expired_at < strtotime('+1 month', time())) {
+                    $this->resetPeriod($plan);
+                }
                 break;
             default:
                 $this->buyByPeriod($order, $plan);

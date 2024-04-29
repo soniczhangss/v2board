@@ -110,6 +110,14 @@ class UserService
         return false;
     }
 
+    public function isAvailableNoExpiryCheck(User $user)
+    {
+        if (!$user->banned && ($user->transfer_enable || $user->expired_at === NULL)) {
+            return true;
+        }
+        return false;
+    }
+
     public function getAvailableUsers()
     {
         return User::whereRaw('u + d < transfer_enable')
