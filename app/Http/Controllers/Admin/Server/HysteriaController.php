@@ -2,21 +2,37 @@
 
 namespace App\Http\Controllers\Admin\Server;
 
-use App\Http\Requests\Admin\ServerV2raySave;
-use App\Http\Requests\Admin\ServerV2rayUpdate;
+use App\Http\Requests\Admin\ServerVmessSave;
+use App\Http\Requests\Admin\ServerVmessUpdate;
+use App\Models\ServerHysteria;
 use App\Services\ServerService;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
-use App\Models\ServerV2ray;
+use App\Models\ServerVmess;
 
-class V2rayController extends Controller
+class HysteriaController extends Controller
 {
-    public function save(ServerV2raySave $request)
+    public function save(Request $request)
     {
-        $params = $request->validated();
+        $params = $request->validate([
+            'show' => '',
+            'name' => 'required',
+            'group_id' => 'required|array',
+            'route_id' => 'nullable|array',
+            'parent_id' => 'nullable|integer',
+            'host' => 'required',
+            'port' => 'required',
+            'server_port' => 'required',
+            'tags' => 'nullable|array',
+            'rate' => 'required|numeric',
+            'up_mbps' => 'required|numeric|min:1',
+            'down_mbps' => 'required|numeric|min:1',
+            'server_name' => 'nullable',
+            'insecure' => 'required|in:0,1'
+        ]);
 
         if ($request->input('id')) {
-            $server = ServerV2ray::find($request->input('id'));
+            $server = ServerHysteria::find($request->input('id'));
             if (!$server) {
                 abort(500, '服务器不存在');
             }
@@ -30,7 +46,7 @@ class V2rayController extends Controller
             ]);
         }
 
-        if (!ServerV2ray::create($params)) {
+        if (!ServerHysteria::create($params)) {
             abort(500, '创建失败');
         }
 
@@ -42,7 +58,7 @@ class V2rayController extends Controller
     public function drop(Request $request)
     {
         if ($request->input('id')) {
-            $server = ServerV2ray::find($request->input('id'));
+            $server = ServerHysteria::find($request->input('id'));
             if (!$server) {
                 abort(500, '节点ID不存在');
             }
@@ -52,13 +68,18 @@ class V2rayController extends Controller
         ]);
     }
 
-    public function update(ServerV2rayUpdate $request)
+    public function update(Request $request)
     {
+        $request->validate([
+            'show' => 'in:0,1'
+        ], [
+            'show.in' => '显示状态格式不正确'
+        ]);
         $params = $request->only([
             'show',
         ]);
 
-        $server = ServerV2ray::find($request->input('id'));
+        $server = ServerHysteria::find($request->input('id'));
 
         if (!$server) {
             abort(500, '该服务器不存在');
@@ -76,12 +97,12 @@ class V2rayController extends Controller
 
     public function copy(Request $request)
     {
-        $server = ServerV2ray::find($request->input('id'));
+        $server = ServerHysteria::find($request->input('id'));
         $server->show = 0;
         if (!$server) {
             abort(500, '服务器不存在');
         }
-        if (!ServerV2ray::create($server->toArray())) {
+        if (!ServerHysteria::create($server->toArray())) {
             abort(500, '复制失败');
         }
 

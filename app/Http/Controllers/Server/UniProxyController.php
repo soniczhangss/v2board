@@ -3,13 +3,14 @@
 namespace App\Http\Controllers\Server;
 
 use App\Services\ServerService;
+use App\Services\StatisticalService;
 use App\Services\UserService;
 use App\Utils\CacheKey;
 use App\Utils\Helper;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Models\ServerShadowsocks;
-use App\Models\ServerV2ray;
+use App\Models\ServerVmess;
 use App\Models\ServerTrojan;
 use Illuminate\Support\Facades\Cache;
 
@@ -30,6 +31,7 @@ class UniProxyController extends Controller
             abort(500, 'token is error');
         }
         $this->nodeType = $request->input('node_type');
+        if ($this->nodeType === 'v2ray') $this->nodeType = 'vmess';
         $this->nodeId = $request->input('node_id');
         $this->serverService = new ServerService();
         $this->nodeInfo = $this->serverService->getServer($this->nodeId, $this->nodeType);
@@ -62,11 +64,7 @@ class UniProxyController extends Controller
         Cache::put(CacheKey::get('SERVER_' . strtoupper($this->nodeType) . '_ONLINE_USER', $this->nodeInfo->id), count($data), 3600);
         Cache::put(CacheKey::get('SERVER_' . strtoupper($this->nodeType) . '_LAST_PUSH_AT', $this->nodeInfo->id), time(), 3600);
         $userService = new UserService();
-        foreach (array_keys($data) as $k) {
-            $u = $data[$k][0];
-            $d = $data[$k][1];
-            $userService->trafficFetch($u, $d, $k, $this->nodeInfo->toArray(), $this->nodeType);
-        }
+        $userService->trafficFetch($this->nodeInfo->toArray(), $this->nodeType, $data);
 
         return response([
             'data' => true
@@ -86,13 +84,13 @@ class UniProxyController extends Controller
                 ];
 
                 if ($this->nodeInfo->cipher === '2022-blake3-aes-128-gcm') {
-                    $response['server_key'] = Helper::getShadowsocksServerKey($this->nodeInfo->created_at, 16);
+                    $response['server_key'] = Helper::getServerKey($this->nodeInfo->created_at, 16);
                 }
                 if ($this->nodeInfo->cipher === '2022-blake3-aes-256-gcm') {
-                    $response['server_key'] = Helper::getShadowsocksServerKey($this->nodeInfo->created_at, 32);
+                    $response['server_key'] = Helper::getServerKey($this->nodeInfo->created_at, 32);
                 }
                 break;
-            case 'v2ray':
+            case 'vmess':
                 $response = [
                     'server_port' => $this->nodeInfo->server_port,
                     'network' => $this->nodeInfo->network,
@@ -104,7 +102,17 @@ class UniProxyController extends Controller
                 $response = [
                     'host' => $this->nodeInfo->host,
                     'server_port' => $this->nodeInfo->server_port,
-                    'server_name' => $this->nodeInfo->server_name
+                    'server_name' => $this->nodeInfo->server_name,
+                ];
+                break;
+            case 'hysteria':
+                $response = [
+                    'host' => $this->nodeInfo->host,
+                    'server_port' => $this->nodeInfo->server_port,
+                    'server_name' => $this->nodeInfo->server_name,
+                    'up_mbps' => $this->nodeInfo->up_mbps,
+                    'down_mbps' => $this->nodeInfo->down_mbps,
+                    'obfs' => Helper::getServerKey($this->nodeInfo->created_at, 16)
                 ];
                 break;
         }

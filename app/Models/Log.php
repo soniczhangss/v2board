@@ -4,9 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class StatOrder extends Model
+class Log extends Model
 {
-    protected $table = 'v2_stat_order';
+    protected $table = 'v2_log';
     protected $dateFormat = 'U';
     protected $guarded = ['id'];
     protected $casts = [

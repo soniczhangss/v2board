@@ -4,9 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class ServerV2ray extends Model
+class ServerHysteria extends Model
 {
-    protected $table = 'v2_server_v2ray';
+    protected $table = 'v2_server_hysteria';
     protected $dateFormat = 'U';
     protected $guarded = ['id'];
     protected $casts = [
@@ -14,10 +14,6 @@ class ServerV2ray extends Model
         'updated_at' => 'timestamp',
         'group_id' => 'array',
         'route_id' => 'array',
-        'tlsSettings' => 'array',
-        'networkSettings' => 'array',
-        'dnsSettings' => 'array',
-        'ruleSettings' => 'array',
         'tags' => 'array'
     ];
 }

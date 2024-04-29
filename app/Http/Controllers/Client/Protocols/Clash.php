@@ -49,7 +49,7 @@ class Clash
                 array_push($proxy, self::buildShadowsocks($user['uuid'], $item));
                 array_push($proxies, $item['name']);
             }
-            if ($item['type'] === 'v2ray') {
+            if ($item['type'] === 'vmess') {
                 array_push($proxy, self::buildVmess($user['uuid'], $item));
                 array_push($proxies, $item['name']);
             }
@@ -77,12 +77,18 @@ class Clash
             if ($isFilter) continue;
             $config['proxy-groups'][$k]['proxies'] = array_merge($config['proxy-groups'][$k]['proxies'], $proxies);
         }
-        // Force the current subscription domain to be a direct rule
-        $subsDomain = $_SERVER['SERVER_NAME'];
-        $subsDomainRule = "DOMAIN,{$subsDomain},DIRECT";
-        array_unshift($config['rules'], $subsDomainRule);
 
-        $yaml = Yaml::dump($config);
+        $config['proxy-groups'] = array_filter($config['proxy-groups'], function($group) {
+            return $group['proxies'];
+        });
+        $config['proxy-groups'] = array_values($config['proxy-groups']);
+        // Force the current subscription domain to be a direct rule
+        $subsDomain = $_SERVER['HTTP_HOST'];
+        if ($subsDomain) {
+            array_unshift($config['rules'], "DOMAIN,{$subsDomain},DIRECT");
+        }
+
+        $yaml = Yaml::dump($config, 2, 4, Yaml::DUMP_EMPTY_ARRAY_AS_SEQUENCE);
         $yaml = str_replace('$app_name', config('v2board.app_name', 'V2Board'), $yaml);
         return $yaml;
     }
@@ -121,6 +127,11 @@ class Clash
                 if (isset($tlsSettings['serverName']) && !empty($tlsSettings['serverName']))
                     $array['servername'] = $tlsSettings['serverName'];
             }
+        }
+        if ($server['network'] === 'tcp') {
+            $tcpSettings = $server['networkSettings'];
+            if (isset($tcpSettings['header']['type'])) $array['network'] = $tcpSettings['header']['type'];
+            if (isset($tcpSettings['header']['request']['path'][0])) $array['http-opts']['path'] = $tcpSettings['header']['request']['path'][0];
         }
         if ($server['network'] === 'ws') {
             $array['network'] = 'ws';

@@ -49,6 +49,9 @@ class UserService
         $md = date('m-d', $expiredAt);
         $nowYear = strtotime(date("Y-{$md}"));
         $nextYear = strtotime('+1 year', $nowYear);
+        if ($nowYear > time()) {
+            return (int)(($nowYear - time()) / 86400);
+        }
         return (int)(($nextYear - time()) / 86400);
     }
 
@@ -179,10 +182,18 @@ class UserService
         return true;
     }
 
-    public function trafficFetch(int $u, int $d, int $userId, array $server, string $protocol)
+    public function trafficFetch(array $server, string $protocol, array $data)
     {
-        TrafficFetchJob::dispatch($u, $d, $userId, $server, $protocol);
-        StatServerJob::dispatch($u, $d, $server, $protocol, 'd');
-        StatUserJob::dispatch($u, $d, $userId, $server, $protocol, 'd');
+        $statService = new StatisticalService();
+        $statService->setStartAt(strtotime(date('Y-m-d')));
+        $statService->setUserStats();
+        $statService->setServerStats();
+        foreach (array_keys($data) as $userId) {
+            $u = $data[$userId][0];
+            $d = $data[$userId][1];
+            TrafficFetchJob::dispatch($u, $d, $userId, $server, $protocol);
+            $statService->statServer($server['id'], $protocol, $u, $d);
+            $statService->statUser($server['rate'], $userId, $u, $d);
+        }
     }
 }
